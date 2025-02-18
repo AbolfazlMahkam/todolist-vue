@@ -1,57 +1,75 @@
 <script setup>
-import { ref, onMounted, computed, watch } from "vue";
+import { ref, onMounted } from "vue";
 import axios from "axios";
 
 const todos = ref([]);
-const name = ref("");
-
 const inputContent = ref("");
 const inputCategory = ref(null);
 
-const addTodo = () => {
+// Add a new todo
+const addTodo = async () => {
   if (inputContent.value.trim() === "" || inputCategory.value === null) {
     alert("Please fill in all fields!");
     return;
   }
-
-  axios.post("http://localhost:3000/todos", {
-    content: inputContent.value,
-    category: inputCategory.value,
-    done: false,
-  });
-
-  inputContent.value = "";
-  inputCategory.value = null;
+  try {
+    await axios.post("http://localhost:3000/todos", {
+      content: inputContent.value,
+      category: inputCategory.value,
+      done: false,
+    });
+    inputContent.value = "";
+    inputCategory.value = null;
+    await fetchTodos();
+  } catch (error) {
+    console.error("Failed to add todo:", error);
+    alert("An error occurred while adding the todo.");
+  }
 };
 
-const updateTodo = (todo) => {
-  axios.put(`http://localhost:3000/todos/${todo.id}`, {
-    content: todo.content,
-    category: todo.category,
-    done: todo.done,
-  });
+// Update an existing todo
+const updateTodo = async (todo) => {
+  try {
+    await axios.put(`http://localhost:3000/todos/${todo.id}`, {
+      content: todo.content,
+      category: todo.category,
+      done: todo.done,
+    });
+    await fetchTodos();
+  } catch (error) {
+    console.error("Failed to update todo:", error);
+    alert("An error occurred while updating the todo.");
+  }
 };
 
-const removeTodo = (todo) => {
-  axios.delete(`http://localhost:3000/todos/${todo.id}`);
+// Remove a todo
+const removeTodo = async (todo) => {
+  if (!confirm("Are you sure you want to delete this todo?")) {
+    return;
+  }
+  try {
+    await axios.delete(`http://localhost:3000/todos/${todo.id}`);
+    await fetchTodos();
+  } catch (error) {
+    console.error("Failed to delete todo:", error);
+    alert("An error occurred while deleting the todo.");
+  }
 };
 
-watch(name, (newVal) => {
-  localStorage.setItem("name", newVal);
-});
+// Fetch todos from the server
+const fetchTodos = async () => {
+  try {
+    const response = await axios.get("http://localhost:3000/todos");
+    todos.value = response.data;
+  } catch (error) {
+    console.error("Failed to fetch todos:", error);
+    alert("An error occurred while loading the todos.");
+  }
+};
 
+// Load todos on mount
 onMounted(() => {
-  name.value = localStorage.getItem("name") || "";
-
-  axios.get("http://localhost:3000/todos").then((response) => {
-    todos.value = response.data;
-  });
-});
-
-watch(todos, (newVal) => {
-  axios.get("http://localhost:3000/todos").then((response) => {
-    todos.value = response.data;
-  });
+  fetchTodos();
 });
 </script>
 
@@ -59,20 +77,8 @@ watch(todos, (newVal) => {
   <main
     class="w-full h-dvh bg-slate-200 flex flex-col items-center overflow-y-scroll"
   >
-    <section class="my-5">
-      <h2>
-        wats'up,<span class="font-bold">{{ ` ${name}` }}</span>
-        <input
-          class="w-full border border-gray-300 px-2 py-1 rounded-lg"
-          type="text"
-          placeholder="Name here"
-          v-model="name"
-        />
-      </h2>
-    </section>
-
-    <section>
-      <h3>Create a ToDo</h3>
+    <section class="mt-5">
+      <h3 class="text-2xl font-bold text-center">Create a ToDo</h3>
       <form @submit.prevent="addTodo" class="my-3 w-80">
         <h4>What's on your todo list?</h4>
         <input
@@ -82,7 +88,6 @@ watch(todos, (newVal) => {
           v-model="inputContent"
         />
         <h4>Pick a category</h4>
-
         <div class="flex justify-around gap-5 mt-2">
           <label
             class="bg-white p-5 flex flex-col items-center justify-center rounded-md shadow-md shadow-gray-400 cursor-pointer"
@@ -107,7 +112,6 @@ watch(todos, (newVal) => {
             <span>Personal</span>
           </label>
         </div>
-
         <input
           class="w-full bg-blue-500 text-white py-2 rounded-lg my-5 shadow-md shadow-gray-400 cursor-pointer"
           type="submit"
@@ -115,7 +119,6 @@ watch(todos, (newVal) => {
         />
       </form>
     </section>
-
     <section class="w-80">
       <h3 class="text-2xl font-bold text-center">Todo List</h3>
       <div
@@ -131,19 +134,16 @@ watch(todos, (newVal) => {
             v-model="todo.done"
             @change="updateTodo(todo)"
           />
-          <span class="rounded-full"></span>
         </div>
-
         <div>
           <input
             type="text"
             :class="`${
               todo.category === 'business' ? 'text-red-500' : 'text-green-500'
-            } text-white px-2 py-1 rounded-md`"
+            } px-2 py-1 rounded-md`"
             v-model="todo.content"
           />
         </div>
-
         <div>
           <button @click="removeTodo(todo)">Delete</button>
         </div>
