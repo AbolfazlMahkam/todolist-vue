@@ -19,6 +19,7 @@
           todo.category === 'business' ? 'text-red-500' : 'text-green-500'
         } px-2 py-1 rounded-md`"
         v-model="todo.content"
+        @change="updateTodo(todo)"
       />
     </div>
     <div>
